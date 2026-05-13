@@ -1,0 +1,172 @@
+local RunService = game:GetService("RunService")
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local hrp = chr:WaitForChild("HumanoidRootPart")
+local hum = chr:WaitForChild("Humanoid")
+local camera = workspace.CurrentCamera
+
+-- ======= HÀM TẢI ÂM THANH GITHUB =======
+local function GitAud(soundlink, filename)
+    local FileName = filename
+    if not isfile(FileName..".mp3") then
+        writefile(FileName..".mp3", game:HttpGet(soundlink))
+    end
+    return (getcustomasset or getsynasset)(FileName..".mp3")
+end
+
+-- ======= CẤU HÌNH =======
+local entityName = "The Broken End"
+local loopLink = "https://github.com/Ganyu0611/Fog-Mode/raw/refs/heads/main/idk.mp3"
+local jumpLink = "https://github.com/Ganyu0611/Fog-Mode/raw/refs/heads/main/pla.mp3"
+
+local faces = {
+    "rbxassetid://76663541011580",
+    "rbxassetid://82085168451731",
+    "rbxassetid://114110625493729"
+}
+
+local speed = 11
+local duration = 45
+local isChasing = false
+
+-- 1. Tạo Part (Gốc của thực thể)
+local part = Instance.new("Part")
+part.Name = entityName
+part.Size = Vector3.new(6, 6, 6)
+local spawnPos = hrp.CFrame * CFrame.new(0, 0, -10)
+part.CFrame = CFrame.lookAt(spawnPos.p, hrp.Position)
+part.Anchored = true
+part.Transparency = 1
+part.CanCollide = false
+part.Parent = workspace
+
+-- 2. BillboardGui (Kích thước mặt đã được tăng lên 24)
+local billboard = Instance.new("BillboardGui")
+billboard.AlwaysOnTop = true
+billboard.Size = UDim2.new(16, 0, 16, 0) -- Đã chỉnh to hơn theo yêu cầu
+billboard.Parent = part
+
+local imageLabel = Instance.new("ImageLabel")
+imageLabel.Size = UDim2.new(1, 0, 1, 0)
+imageLabel.BackgroundTransparency = 1
+imageLabel.Image = faces[1]
+imageLabel.Parent = billboard
+
+-- 3. Đèn & Âm thanh
+local light = Instance.new("PointLight")
+light.Color = Color3.new(1, 0, 0)
+light.Brightness = 4
+light.Range = 15
+light.Enabled = false
+light.Parent = part
+
+local loopedSound = Instance.new("Sound")
+loopedSound.SoundId = GitAud(loopLink, "BrokenEnd_Loop")
+loopedSound.Volume = 4
+loopedSound.Looped = true
+loopedSound.Parent = part
+
+local oneShotSound = Instance.new("Sound")
+oneShotSound.SoundId = GitAud(jumpLink, "BrokenEnd_Jump")
+oneShotSound.Volume = 10
+oneShotSound.Parent = part
+
+---------------------------------------------------------
+-- HÀM RUNG MÀN HÌNH
+---------------------------------------------------------
+local function ApplyShake()
+    local intensity = 0.05 
+    local shakeOffset = CFrame.new(
+        math.random(-100, 100)/100 * intensity,
+        math.random(-100, 100)/100 * intensity,
+        0
+    ) * CFrame.Angles(
+        math.rad(math.random(-100, 100)/100 * intensity * 5),
+        math.rad(math.random(-100, 100)/100 * intensity * 5),
+        math.rad(math.random(-100, 100)/100 * intensity * 5)
+    )
+    camera.CFrame = camera.CFrame * shakeOffset
+end
+
+local shakeConnection
+local function StartCameraShake()
+    shakeConnection = RunService:BindToRenderStep("BrokenEndShake", 2000, ApplyShake)
+end
+
+---------------------------------------------------------
+-- LOGIC HOẠT ĐỘNG
+---------------------------------------------------------
+
+task.wait(1.5)
+
+if not part or not part.Parent then return end
+light.Enabled = true
+isChasing = true
+oneShotSound:Play() 
+loopedSound:Play()  
+StartCameraShake()
+
+-- Vòng lặp đổi mặt (Animation)
+task.spawn(function()
+    while part and part.Parent do
+        imageLabel.Image = faces[2]
+        task.wait(0.5)
+        if not part.Parent then break end
+        imageLabel.Image = faces[1]
+        task.wait(0.5)
+        if not part.Parent then break end
+        imageLabel.Image = faces[3]
+        task.wait(0.5)
+        if not part.Parent then break end
+        imageLabel.Image = faces[1]
+        task.wait(0.5)
+    end
+end)
+
+-- Hệ thống di chuyển (Đuổi theo người chơi)
+local moveConnection
+moveConnection = RunService.Heartbeat:Connect(function(dt)
+    if hrp and hrp.Parent and part and part.Parent then
+        if chr:GetAttribute("Hiding") then return end
+        local targetPos = hrp.Position
+        local currentPos = part.Position
+        local direction = (targetPos - currentPos)
+        local distance = direction.Magnitude
+        if distance > 0.5 then
+            direction = direction.Unit
+            part.CFrame = CFrame.new(currentPos + direction * math.min(distance, speed * dt), targetPos)
+        end
+    end
+end)
+
+-- Hệ thống gây sát thương và Lý do chết
+task.spawn(function()
+    while part and part.Parent do
+        if not chr:GetAttribute("Hiding") and light.Enabled then 
+            if hrp and hrp.Parent then
+                local dist = (part.Position - hrp.Position).Magnitude
+                if dist <= 8 then
+                    if hum and hum.Health > 0 then 
+                        hum:TakeDamage(5)
+                        
+                        -- Nếu người chơi chết, gán lý do chết là "The Broken End"
+                        if hum.Health <= 0 then
+                            pcall(function()
+                                game.ReplicatedStorage.GameStats["Player_" .. plr.Name].Total.DeathCause.Value = entityName
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Tự hủy sau khi hết thời gian (duration)
+task.delay(duration, function()
+    isChasing = false
+    RunService:UnbindFromRenderStep("BrokenEndShake")
+    if moveConnection then moveConnection:Disconnect() end
+    if part then part:Destroy() end
+end)
