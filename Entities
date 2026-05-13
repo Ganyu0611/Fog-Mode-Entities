@@ -1,0 +1,81 @@
+--====================================================--
+--           DỰ ÁN FOG MODE - GHOST VERSION           --
+--====================================================--
+
+local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LatestRoom = ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom")
+local Camera = workspace.CurrentCamera
+local Player = Players.LocalPlayer
+
+-- [0] ĐỒNG BỘ HÓA SEED
+local seed = tonumber(game.JobId:gsub("%D+", ""):sub(1, 9)) or os.time()
+local rng = Random.new(seed)
+
+print("================================")
+print("🌫️ FOG MODE")
+print("🆔 SEED: " .. tostring(seed))
+print("================================")
+
+-- HÀM HỖ TRỢ
+local function spawnEntity(url)
+    pcall(function()
+        loadstring(game:HttpGet(url))()
+    end)
+end
+
+--====================================================--
+-- [1] LOGIC TỶ LỆ CẬP NHẬT (THÊM R2)
+--====================================================--
+LatestRoom.Changed:Connect(function()
+    -- Tỉ lệ: Người luộc (34), Hunger (20), Spectrum (20), B1T3 (24), Broken End (32), R2 (21)
+    local rates = {34, 20, 20, 24, 32, 21} 
+    local urls = {
+        "https://raw.githubusercontent.com/Ganyu0611/Fog-Mode-Entities/refs/heads/main/Boiled%20One%20(2).txt",
+        "https://raw.githubusercontent.com/Ganyu0611/Fog-Mode-Entities/refs/heads/main/Integrity%20(2).txt",
+        "https://raw.githubusercontent.com/Ganyu0611/Fog-Mode-Entities/refs/heads/main/Spectrum%2011",
+        "https://raw.githubusercontent.com/Ganyu0611/Fog-Mode-Entities/refs/heads/main/Bite%20(1).txt",
+        "https://raw.githubusercontent.com/Ganyu0611/Fog-Mode-Entities/refs/heads/main/The%20Broken%20End",
+        "https://github.com/Ganyu0611/Fog-Mode-Entities/raw/refs/heads/main/R2"
+    }
+
+    local debugLine = "Fog Check: "
+    for i, rate in ipairs(rates) do
+        local roll = rng:NextInteger(1, rate)
+        debugLine = debugLine .. "[" .. roll .. "/" .. rate .. "] "
+        
+        if roll == 1 then
+            spawnEntity(urls[i])
+        end
+    end
+    print(debugLine)
+end)
+
+--====================================================--
+-- [2] LOGIC ĐẾM GIÂY (BROKEN END)
+--====================================================--
+task.spawn(function()
+    task.wait(80) 
+    spawnEntity("https://raw.githubusercontent.com/Ganyu0611/Fog-Mode-Entities/refs/heads/main/The%20Broken%20End")
+    
+    while true do
+        task.wait(170) 
+        spawnEntity("https://raw.githubusercontent.com/Ganyu0611/Fog-Mode-Entities/refs/heads/main/The%20Broken%20End")
+    end
+end)
+
+--====================================================--
+-- [3] DEATH UI (GHOST STYLE)
+--====================================================--
+_G.DO_RED_GUY = true 
+Camera.ChildAdded:Connect(function(Child)
+    if Child.Name ~= "DeathBackgroundBlue" or not _G.DO_RED_GUY then return end
+    pcall(function()
+        local DeathUI = Player.PlayerGui.MainUI.Death
+        DeathUI.HelpfulDialogue.TextColor3 = Color3.fromRGB(160, 32, 240)
+    end)
+end)
+
+print("Vuivuiviu2 deptrai")
+
