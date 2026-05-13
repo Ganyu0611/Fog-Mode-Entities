@@ -1,0 +1,44 @@
+-- ======= HÀM TẢI ÂM THANH (CỦA BẠN) =======
+function GitAud(soundlink, filename)
+    local url = soundlink
+    local FileName = filename
+    if not isfile(FileName..".mp3") then
+        writefile(FileName..".mp3", game:HttpGet(url))
+    end
+    return (getcustomasset or getsynasset)(FileName..".mp3")
+end
+
+-- ======= HÀM PHÁT NHẠC (VỪA TAI) =======
+function CustomGitSoundChill(soundlink, vol, filename)
+    local Sound = Instance.new("Sound")
+    Sound.SoundId = GitAud(soundlink, filename)
+    Sound.Parent = game:GetService("SoundService")
+    Sound.Volume = vol -- Để tầm 3 là vừa đẹp
+    Sound.Looped = false
+    
+    Sound:Play()
+    
+    Sound.Ended:Connect(function()
+        Sound:Destroy()
+    end)
+    
+    return Sound
+end
+
+-- ===== Logic phát nhạc cửa đầu tiên =====
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GameData = ReplicatedStorage:WaitForChild("GameData")
+
+local played = false
+local musicUrl = "https://github.com/Ganyu0611/Fog-Mode/raw/refs/heads/main/The%20Broken%20Script%20OST%20-%20falsecalm2%20-%20Pickle%20Boi.mp3"
+
+GameData.LatestRoom:GetPropertyChangedSignal("Value"):Connect(function()
+    if played then return end
+    
+    -- Khi mở cửa 1 (LatestRoom nhảy lên 1)
+    if GameData.LatestRoom.Value == 1 then
+        played = true
+        -- Volume 3: To gấp 3 lần bình thường, đủ để nghe rõ giai điệu
+        CustomGitSoundChill(musicUrl, 2, "FirstDoorMusic_Chill")
+    end
+end)
