@@ -1,0 +1,137 @@
+local RunService = game:GetService("RunService")
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local hrp = chr:WaitForChild("HumanoidRootPart")
+local hum = chr:WaitForChild("Humanoid")
+local Debris = game:GetService("Debris")
+local rs = game:GetService("ReplicatedStorage")
+local dmg = true
+
+game.ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom").Changed:Wait()
+
+local function tp(model)
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://87290118952161"
+sound.Volume = 3
+sound.Parent = model
+sound.RollOffMinDistance = 999
+sound:Play()
+Debris:AddItem(sound, 2)
+end
+
+local part = Instance.new("Part")
+part.Size = Vector3.new(5, 5, 5)
+part.CFrame = hrp.CFrame * CFrame.new(0, 0, 30)
+part.Anchored = true
+part.Transparency = 1
+part.CanCollide = false
+part.CastShadow = false
+part.Parent = workspace.CurrentRooms
+
+local billboard = Instance.new("BillboardGui")
+billboard.AlwaysOnTop = true
+billboard.Size = UDim2.new(8, 0, 8, 0)
+billboard.SizeOffset = Vector2.new(0, 0.2)
+billboard.Parent = part
+billboard.Adornee = part
+
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://70421896110555"
+sound.Volume = 3
+sound.Parent = workspace
+sound:Play()
+Debris:AddItem(sound, 7)
+
+local static = Instance.new("Sound")
+static.SoundId = "rbxassetid://318794788"
+static.Volume = 5
+static.PlaybackSpeed = 0.3
+static.RollOffMaxDistance = 50
+static.RollOffMinDistance = 25
+static.Looped = true
+static:Play()
+static.Parent = part
+
+local light = Instance.new("PointLight")
+light.Color = Color3.new(1, 0, 0)
+light.Brightness = 1
+light.Range = 15
+light.Parent = part
+
+local imageLabel = Instance.new("ImageLabel")
+imageLabel.Size = UDim2.new(1, 0, 1, 0)
+imageLabel.BackgroundTransparency = 1
+imageLabel.Image = "rbxassetid://117316186252357"
+imageLabel.Parent = billboard
+
+wait(4)
+task.spawn(function()
+    while part and part.Parent do
+        task.wait(0.3)
+        if not chr:GetAttribute("Hiding") then 
+            part.CFrame = part.CFrame * CFrame.new(0, 0, -1)
+        end
+    end
+end)
+
+task.spawn(function()
+    while part and part.Parent do
+         task.wait(9)
+         if not chr:GetAttribute("Hiding") then 
+             local rd = math.random(-15, 15)
+             tp(part)
+             part.CFrame = chr.HumanoidRootPart.CFrame * CFrame.new(rd, 0, -20)
+         end
+    end
+end)
+
+local speed = 4
+local move
+
+move = RunService.Heartbeat:Connect(function(dt)
+    if hrp and hrp.Parent and part and part.Parent then
+        if chr:GetAttribute("Hiding") then return end 
+
+        local targetPos = hrp.Position
+        local currentPos = part.Position
+        local direction = (targetPos - currentPos)
+        local distance = direction.Magnitude
+
+        if distance > 1 then
+            direction = direction.Unit
+            local moveDist = math.min(distance, speed * dt)
+            local newPos = currentPos + direction * moveDist
+            part.CFrame = CFrame.new(newPos, targetPos)
+        end
+    end
+end)
+
+local damageAmount = 5
+local damageInterval = 0.5
+local range = 8
+
+task.spawn(function()
+    while part and part.Parent do
+        if not chr:GetAttribute("Hiding") then 
+            for _, player in pairs(game.Players:GetPlayers()) do
+                local character = player.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    local distance = (part.Position - character.HumanoidRootPart.Position).Magnitude
+                    
+                    if distance <= range and humanoid and humanoid.Health > 0 then
+                        humanoid:TakeDamage(damageAmount)
+                        pcall(function()
+                            game.ReplicatedStorage.GameStats["Player_" .. player.Name].Total.DeathCause.Value = "The Boiled One"
+                        end)
+                    end
+                end
+            end
+        end
+        task.wait(damageInterval)
+    end
+end)
+
+wait(60)
+if move then move:Disconnect() end
+if part then part:Destroy() end
