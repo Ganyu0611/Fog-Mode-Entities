@@ -30,7 +30,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameData = ReplicatedStorage:WaitForChild("GameData")
 
 local played = false
-local musicUrl = "https://github.com/Ganyu0611/Fog-Mode/raw/refs/heads/main/The%20Broken%20Script%20OST%20-%20falsecalm2%20-%20Pickle%20Boi.mp3"
+local musicUrl = "https://github.com/Ganyu0611/Fog-Mode/raw/refs/heads/main/Fog_Mode_Ambient.mp3"
 
 GameData.LatestRoom:GetPropertyChangedSignal("Value"):Connect(function()
     if played then return end
@@ -39,6 +39,6 @@ GameData.LatestRoom:GetPropertyChangedSignal("Value"):Connect(function()
     if GameData.LatestRoom.Value == 1 then
         played = true
         -- Volume 3: To gấp 3 lần bình thường, đủ để nghe rõ giai điệu
-        CustomGitSoundChill(musicUrl, 3.4, "FirstDoorMusic_Chill")
+        CustomGitSoundChill(musicUrl, 3.4, "FirstDoorMusic_Chillriel")
     end
 end)
