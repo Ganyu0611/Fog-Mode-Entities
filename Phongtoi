@@ -1,0 +1,53 @@
+local Lighting = game:GetService("Lighting")
+
+-- Cấu hình mặc định
+local defaultFogStart = 8
+local defaultFogEnd = 45
+local wallColor = Color3.fromRGB(60, 60, 60)
+local targets = {"LightStand", "Chandelier"}
+
+-- 1. Ánh sáng môi trường
+Lighting.Brightness = 1
+Lighting.ClockTime = 0
+Lighting.OutdoorAmbient = Color3.fromRGB(50, 50, 50)
+Lighting.Ambient = Color3.fromRGB(50, 50, 50)
+
+-- 2. Cấu hình Fog ban đầu
+Lighting.FogColor = Color3.fromRGB(1, 1, 1)
+Lighting.FogStart = defaultFogStart
+Lighting.FogEnd = defaultFogEnd
+
+-- 3. Cấu hình ColorCorrection
+local colorCorrection = Lighting:FindFirstChild("GameVisuals") or Instance.new("ColorCorrectionEffect", Lighting)
+colorCorrection.Name = "GameVisuals"
+colorCorrection.Brightness = 0
+colorCorrection.Contrast = 0.04
+
+while true do
+    -- Kiểm tra xem Seek có đang tồn tại trong Workspace không
+    local seek = game.Workspace:FindFirstChild("SeekMovingNewClone")
+    
+    if seek then
+        -- Nếu có Seek: Xóa Fog để dễ chạy
+        Lighting.FogStart = 0
+        Lighting.FogEnd = 100000 -- Khoảng cách cực lớn tương đương với tắt Fog
+    else
+        -- Nếu không có Seek: Trả lại Fog bình thường
+        Lighting.FogStart = defaultFogStart
+        Lighting.FogEnd = defaultFogEnd
+    end
+
+    -- Quét các object để xử lý đèn và tường
+    for _, object in pairs(game.Workspace:GetDescendants()) do
+        -- Xóa các Model đèn
+        if object:IsA("Model") and (object.Name == targets[1] or object.Name == targets[2]) then
+            object:Destroy()
+        
+        -- Đổi màu tường
+        elseif object:IsA("BasePart") and object.Name == "Wall" then
+            object.Color = wallColor
+        end
+    end
+    
+    task.wait(2)
+end
