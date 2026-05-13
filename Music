@@ -39,6 +39,6 @@ GameData.LatestRoom:GetPropertyChangedSignal("Value"):Connect(function()
     if GameData.LatestRoom.Value == 1 then
         played = true
         -- Volume 3: To gấp 3 lần bình thường, đủ để nghe rõ giai điệu
-        CustomGitSoundChill(musicUrl, 2, "FirstDoorMusic_Chill")
+        CustomGitSoundChill(musicUrl, 3.4, "FirstDoorMusic_Chill")
     end
 end)
