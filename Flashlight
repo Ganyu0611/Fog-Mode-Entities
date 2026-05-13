@@ -1,0 +1,189 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local backpack = player:WaitForChild("Backpack")
+local camera = Workspace.CurrentCamera
+
+--===== CONFIG =====
+local TOOL_ICON_ID = 125385865779448 -- Đã đổi Icon theo yêu cầu
+local MODEL_ID = 15430976589
+local HOLD_ANIMATION_ID = 100296215597460
+local FLICKER_SOUND_ID = 8828232582 
+local SPOTLIGHT_COLOR = Color3.fromRGB(255, 255, 255)
+
+local ARM_OFFSET_DEGREES = 40 
+local RUSH_FLICKER_SPEED = 0.15 
+local RUSH_FLICKER_DURATION = 2.0 -- Nháy 2 giây
+
+--===== LOAD TOOL MODEL =====
+local objects = game:GetObjects("rbxassetid://" .. MODEL_ID)
+if not objects or #objects == 0 then return end
+
+local model = objects[1]
+local tool = Instance.new("Tool")
+tool.Name = "Flashlight"
+tool.RequiresHandle = true
+tool.TextureId = "rbxassetid://" .. TOOL_ICON_ID
+
+local handle = Instance.new("Part")
+handle.Name = "Handle"
+handle.Size = Vector3.new(1, 1, 1)
+handle.Transparency = 1
+handle.CanCollide = false
+handle.Parent = tool
+
+model.Parent = tool
+
+if model:IsA("Model") then
+	model:PivotTo(handle.CFrame * CFrame.new(0, 0, -0.8))
+else
+	model.CFrame = handle.CFrame * CFrame.new(0, 0, -0.8)
+end
+
+for _, obj in ipairs(model:GetDescendants()) do
+	if obj:IsA("BasePart") then
+		obj.Anchored = false
+		obj.CanCollide = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = handle
+		weld.Part1 = obj
+		weld.Parent = handle
+	end
+end
+
+--===== SPOTLIGHT & SOUND =====
+local attachment = Instance.new("Attachment")
+attachment.Parent = handle
+
+local light = Instance.new("SpotLight")
+light.Parent = attachment
+light.Enabled = false
+light.Color = SPOTLIGHT_COLOR
+light.Brightness = 5
+light.Range = 25
+light.Angle = 40
+light.Shadows = true
+light.Face = Enum.NormalId.Front
+
+-- Cài đặt âm thanh (Chỉ dùng khi cần, đã xóa lệnh Play ở phần Rush)
+local flickerSound = Instance.new("Sound")
+flickerSound.SoundId = "rbxassetid://" .. FLICKER_SOUND_ID
+flickerSound.Volume = 0.6
+flickerSound.PlaybackSpeed = 0.45 
+flickerSound.Parent = handle
+
+tool.Parent = backpack
+
+--===== CAMERA FOLLOW & ARM LIFT =====
+local camConn
+local rightShoulder = nil
+
+local function getRightShoulder(character)
+	return character:FindFirstChild("RightShoulder", true) or character:FindFirstChild("Right Shoulder", true)
+end
+
+local function startCameraFollow()
+	local character = player.Character
+	if character then
+		rightShoulder = getRightShoulder(character)
+	end
+
+	camConn = RunService.RenderStepped:Connect(function()
+		if attachment then
+			local origin = attachment.WorldPosition
+			attachment.WorldCFrame = CFrame.lookAt(origin, origin + camera.CFrame.LookVector)
+		end
+
+		if rightShoulder then
+			rightShoulder.Transform = rightShoulder.Transform * CFrame.Angles(math.rad(ARM_OFFSET_DEGREES), 0, 0)
+		end
+	end)
+end
+
+local function stopCameraFollow()
+	if camConn then camConn:Disconnect() camConn = nil end
+	rightShoulder = nil
+end
+
+--===== HOLD ANIMATION =====
+local animTrack
+local function playHoldAnimation(character)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+	local animation = Instance.new("Animation")
+	animation.AnimationId = "rbxassetid://" .. HOLD_ANIMATION_ID
+	animTrack = animator:LoadAnimation(animation)
+	animTrack.Priority = Enum.AnimationPriority.Action
+	animTrack.Looped = true
+	animTrack:Play()
+end
+
+local function stopHoldAnimation()
+	if animTrack then animTrack:Stop() animTrack:Destroy() animTrack = nil end
+end
+
+--===== RUSH FLICKER SYSTEM =====
+local isFlickering = false
+
+local function OnRushSpawned(rushInstance)
+	if isFlickering or not tool.Parent:IsA("Model") then return end 
+	
+	isFlickering = true
+	local endTime = tick() + RUSH_FLICKER_DURATION
+	
+	task.spawn(function()
+		while tick() < endTime do
+			local newState = not light.Enabled
+			light.Enabled = newState
+			
+			for _, v in ipairs(handle:GetChildren()) do
+				if v:IsA("Beam") then v.Enabled = newState end
+			end
+			for _, v in ipairs(model:GetDescendants()) do
+				if v:IsA("Beam") then v.Enabled = newState end
+			end
+
+			-- flickerSound:Play() -> ĐÃ XÓA ÂM THANH THEO YÊU CẦU
+			task.wait(RUSH_FLICKER_SPEED)
+		end
+		
+		if tool.Parent:IsA("Model") then
+			light.Enabled = true
+			for _, v in ipairs(handle:GetChildren()) do if v:IsA("Beam") then v.Enabled = true end end
+			for _, v in ipairs(model:GetDescendants()) do if v:IsA("Beam") then v.Enabled = true end end
+		end
+		isFlickering = false
+	end)
+end
+
+-- Vòng lặp phát hiện Rush
+task.spawn(function()
+    local isProcessing = false
+    while true do
+        local rush = workspace:FindFirstChild("RushMoving")
+        if rush and not isProcessing then
+            isProcessing = true
+            OnRushSpawned(rush)
+            repeat task.wait(0.5) until not workspace:FindFirstChild("RushMoving")
+            isProcessing = false
+        end
+        task.wait(0.1)
+    end
+end)
+
+--===== EQUIP / UNEQUIP =====
+tool.Equipped:Connect(function()
+	local char = player.Character or player.CharacterAdded:Wait()
+	playHoldAnimation(char)
+	light.Enabled = true
+	startCameraFollow()
+end)
+
+tool.Unequipped:Connect(function()
+	stopHoldAnimation()
+	light.Enabled = false
+	stopCameraFollow()
+end)
