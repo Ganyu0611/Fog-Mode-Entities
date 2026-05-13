@@ -1,0 +1,35 @@
+local SoundService = game:GetService("SoundService")
+
+-- ======= CẤU HÌNH VANG VỪA PHẢI =======
+local function ApplyLightEcho(parent)
+    if not parent:FindFirstChild("GlobalEcho") then
+        local echo = Instance.new("EchoSoundEffect")
+        echo.Name = "GlobalEcho"
+        echo.Delay = 0.15    -- Giảm độ trễ để tiếng vang gọn hơn
+        echo.Feedback = 0.3  -- Tiếng vang sẽ nhỏ dần và ngắt nhanh hơn, không bị lặp vô tận
+        echo.DryLevel = 0    -- Giữ nguyên âm thanh gốc
+        echo.WetLevel = -10  -- Tiếng vang nhỏ hơn âm thanh gốc đáng kể để tạo độ sâu nhẹ
+        echo.Enabled = true
+        echo.Parent = parent
+    end
+end
+
+-- 1. Áp dụng cho SoundService
+ApplyLightEcho(SoundService)
+
+-- 2. Quét toàn bộ âm thanh hiện có trong game
+for _, obj in pairs(game:GetDescendants()) do
+    if obj:IsA("Sound") then
+        ApplyLightEcho(obj)
+    end
+end
+
+-- 3. Tự động thêm hiệu ứng cho âm thanh mới (bao gồm cả thực thể của bạn)
+game.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("Sound") then
+        ApplyLightEcho(descendant)
+    end
+end)
+
+print("vuivuiviu2 deptrai")
+
