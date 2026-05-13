@@ -7,7 +7,7 @@ local backpack = player:WaitForChild("Backpack")
 local camera = Workspace.CurrentCamera
 
 --===== CONFIG =====
-local TOOL_ICON_ID = 84467332562151 -- Đã đổi Icon theo yêu cầu
+local TOOL_ICON_ID = 84467332562151 -- idmoimaaaa
 local MODEL_ID = 15430976589
 local HOLD_ANIMATION_ID = 100296215597460
 local FLICKER_SOUND_ID = 8828232582 
