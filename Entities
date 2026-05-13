@@ -30,7 +30,7 @@ end
 --====================================================--
 LatestRoom.Changed:Connect(function()
     -- Tỉ lệ: Người luộc (34), Hunger (20), Spectrum (20), B1T3 (24), Broken End (32), R2 (21)
-    local rates = {34, 20, 20, 24, 32, 21} 
+    local rates = {27, 20, 27, 27, 36, 29} 
     local urls = {
         "https://raw.githubusercontent.com/Ganyu0611/Fog-Mode-Entities/refs/heads/main/Boiled%20One%20(2).txt",
         "https://raw.githubusercontent.com/Ganyu0611/Fog-Mode-Entities/refs/heads/main/Integrity%20(2).txt",
