@@ -1,0 +1,176 @@
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+local plr = game.Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local hrp = chr:WaitForChild("HumanoidRootPart")
+local hum = chr:WaitForChild("Humanoid")
+local camera = workspace.CurrentCamera
+
+-- ======= CẤU HÌNH R2 =======
+local faceID = "rbxassetid://137355580968167"
+local jumpscareID = "rbxassetid://109832144298430"
+local thunderSoundID = "rbxassetid://6348945391"
+local jcSoundLink = "https://github.com/Ganyu0611/Fog-Mode/raw/refs/heads/main/jc.mp3"
+local chaseSoundLink = "https://github.com/Ganyu0611/Fog-Mode/raw/refs/heads/main/R2.mp3"
+
+local speed = 12
+local chaseDuration = 30
+local isChasing = false
+local hasInteracted = false
+
+-- ======= HÀM TẢI ÂM THANH =======
+local function SafeSound(link, name, parent)
+    local s = Instance.new("Sound", parent)
+    task.spawn(function()
+        pcall(function()
+            if not isfile(name..".mp3") then
+                writefile(name..".mp3", game:HttpGet(link))
+            end
+            s.SoundId = (getcustomasset or getsynasset)(name..".mp3")
+        end)
+    end)
+    return s
+end
+
+-- ======= 1. TẠO THỰC THỂ =======
+local part = Instance.new("Part", workspace)
+part.Name = "R2"; part.Size = Vector3.new(4, 4, 4); part.Anchored = true; part.Transparency = 1; part.CanCollide = false
+part.CFrame = CFrame.lookAt((hrp.CFrame * CFrame.new(0, 2, 30)).Position, hrp.Position)
+
+local billboard = Instance.new("BillboardGui", part)
+billboard.AlwaysOnTop = true; billboard.Size = UDim2.new(10, 0, 10, 0)
+local img = Instance.new("ImageLabel", billboard)
+img.Size = UDim2.new(1, 0, 1, 0); img.BackgroundTransparency = 1; img.Image = faceID
+
+-- ======= 2. GUI JUMPSCARE (HÌNH ĐỎ ÁM ẢNH) =======
+local jumpGui = Instance.new("ScreenGui", plr.PlayerGui); jumpGui.IgnoreGuiInset = true
+jumpGui.DisplayOrder = 999
+
+local jumpImg = Instance.new("ImageLabel", jumpGui)
+jumpImg.Size = UDim2.new(1.3, 0, 1.3, 0)
+jumpImg.Position = UDim2.new(0.5, 0, 0.5, 0)
+jumpImg.AnchorPoint = Vector2.new(0.5, 0.5)
+jumpImg.Image = jumpscareID
+jumpImg.ImageColor3 = Color3.new(1, 0, 0) -- Nhuộm đỏ
+jumpImg.BackgroundTransparency = 1
+jumpImg.Visible = false
+
+-- Khởi tạo âm thanh
+local jcSound = SafeSound(jcSoundLink, "R2_JC", camera); jcSound.Volume = 5
+local chaseSound = SafeSound(chaseSoundLink, "R2_Chase", part); chaseSound.Looped = true; chaseSound.Volume = 10
+local thunder = Instance.new("Sound", camera); thunder.SoundId = thunderSoundID; thunder.Volume = 3
+
+---------------------------------------------------------
+-- HIỆU ỨNG RUNG
+---------------------------------------------------------
+local function ApplyEffects()
+    if isChasing then
+        local intensity = 0.15
+        local shakeOffset = CFrame.new(
+            math.random(-100, 100)/100 * intensity,
+            math.random(-100, 100)/100 * intensity,
+            0
+        ) * CFrame.Angles(
+            math.rad(math.random(-100, 100)/100 * intensity * 2.5),
+            math.rad(math.random(-100, 100)/100 * intensity * 2.5),
+            math.rad(math.random(-100, 100)/100 * intensity * 2.5)
+        )
+        camera.CFrame = camera.CFrame * shakeOffset
+        jumpImg.Position = UDim2.new(0.5, math.random(-30, 30), 0.5, math.random(-30, 30))
+    end
+end
+
+---------------------------------------------------------
+-- LOGIC KHI BẮT ĐẦU DÍ
+---------------------------------------------------------
+local function StartChase()
+    isChasing = true
+    hum.Health = hum.Health * 0.5 
+    
+    local oldExposure = Lighting.ExposureCompensation
+    thunder:Play()
+    chaseSound:Play()
+    
+    local distEff = Instance.new("DistortionSoundEffect", SoundService); distEff.Level = 0.7
+    
+    jumpImg.Visible = true
+    jumpImg.ImageTransparency = 0 
+    
+    RunService:BindToRenderStep("R2ChaseEffects", Enum.RenderPriority.Camera.Value + 1, ApplyEffects)
+    
+    task.wait(0.5)
+    jumpImg.ImageTransparency = 0.7 -- Mờ đỏ
+    
+    -- Vòng lặp Sáng/Tối
+    task.spawn(function()
+        while isChasing do
+            Lighting.ExposureCompensation = -2; task.wait(5)
+            if not isChasing then break end
+            Lighting.ExposureCompensation = 2.5; task.wait(5)
+        end
+        Lighting.ExposureCompensation = oldExposure
+        if distEff then distEff:Destroy() end
+    end)
+    
+    task.delay(chaseDuration, function()
+        isChasing = false
+        jumpImg.Visible = false
+        RunService:UnbindFromRenderStep("R2ChaseEffects")
+        if part then part:Destroy() end
+    end)
+end
+
+---------------------------------------------------------
+-- LOGIC KÍCH HOẠT
+---------------------------------------------------------
+task.spawn(function()
+    local start = tick()
+    while (tick() - start) < 15 and not hasInteracted do
+        if part and part.Parent then
+            local toEnt = (part.Position - camera.CFrame.Position).Unit
+            if toEnt:Dot(camera.CFrame.LookVector) > 0.995 then
+                hasInteracted = true
+                jcSound:Play()
+                jumpImg.Visible = true
+                jumpImg.ImageTransparency = 0
+                task.wait(0.5)
+                
+                if math.random(1, 100) > 50 then 
+                    StartChase() 
+                else 
+                    jumpImg.Visible = false
+                    part:Destroy() 
+                end
+                break
+            end
+        end
+        task.wait(0.01)
+    end
+    if not hasInteracted and part then part:Destroy() end
+end)
+
+-- ======= DÍ VÀ GHI ĐÈ LÝ DO CHẾT =======
+RunService.Heartbeat:Connect(function(dt)
+    if isChasing and part and part.Parent and hrp then
+        local vec = (hrp.Position - part.Position)
+        part.CFrame = CFrame.new(part.Position + vec.Unit * (speed * dt), hrp.Position)
+        
+        -- KHI CHẠM (GIẾT)
+        if vec.Magnitude < 4.5 then
+            -- Ghi đè lý do chết trước khi Humanoid chết
+            pcall(function()
+                local stats = game.ReplicatedStorage:FindFirstChild("GameStats")
+                if stats then
+                    local pStats = stats:FindFirstChild("Player_" .. plr.Name)
+                    if pStats then
+                        pStats.Total.DeathCause.Value = "R2"
+                    end
+                end
+            end)
+            
+            hum.Health = 0
+        end
+    end
+end)
+
